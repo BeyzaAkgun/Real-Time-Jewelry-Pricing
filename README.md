@@ -86,11 +86,11 @@ git clone https://github.com/BeyzaAkgun/renart-case-study.git
 cd renart-case-study
 
 2) Install dependencies
-Backend
+Backend:
 cd backend
 npm install
 
-Frontend
+Frontend:
 cd ../frontend
 npm install
 
@@ -144,35 +144,22 @@ It should return:
  Deployment
 Frontend (Vercel)
 
-## Push your repo to GitHub
+ ## Deployment
+Backend (Render):
 
-Go to https://vercel.com
- → Import project → Select frontend/ folder
+URL: https://renart-backend-l0ts.onrender.com
 
-Set build command: npm run build, output: dist
+Frontend (Render Static Site)
 
-Backend (Render)
+URL: https://renart-frontend-vnj3.onrender.com
 
-Go to https://render.com
+Frontend App.jsx: replace
 
-Create new Web Service → connect to repo → select backend/ folder
-
-Add environment variable in Render:
-
-GOLD_API_KEY=your_goldapi_key_here
-
-
-Start service → note the URL (e.g., https://renart-backend.onrender.com
-)
-
-In frontend/App.jsx, replace:
-
+// Local
 axios.get("http://localhost:4000/products")
 
-
-with:
-
-axios.get("https://renart-backend.onrender.com/products")
+// With live backend
+axios.get("https://renart-backend-l0ts.onrender.com/products")
 
 
 Then redeploy frontend.
