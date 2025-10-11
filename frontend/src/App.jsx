@@ -28,7 +28,8 @@ function App() {
       if (maxPrice) params.maxPrice = maxPrice;
       if (sortBy) params.sortBy = sortBy;
 
-      const res = await axios.get("http://localhost:4000/products", { params });
+      const API_URL = import.meta.env.VITE_API_URL;
+      const res = await axios.get(`${API_URL}/products`, { params });
       setProducts(res.data.data || []);
     } catch (err) {
       console.error(err);
