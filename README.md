@@ -1,6 +1,6 @@
 
 
-### Renart Case Study
+### Real-Time-Jewelry-Pricing
 ## Project Overview
 
 Renart Case Study is a full-stack product listing application built with React (Vite) for the frontend and Express.js for the backend.
