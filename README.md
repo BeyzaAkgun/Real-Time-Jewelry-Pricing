@@ -1,183 +1,69 @@
+# Real-Time Jewelry Pricing
 
+React + Express portfolio case study: an eight-product jewelry collection with three metal finishes, responsive desktop carousel/mobile grid, price filtering and sorting. Product prices use the original case-study formula:
 
-### Real-Time-Jewelry-Pricing
-## Project Overview
+`(popularityScore + 1) × weightInGrams × goldPriceUSDPerGram`
 
-Renart Case Study is a full-stack product listing application built with React (Vite) for the frontend and Express.js for the backend.
-The project dynamically fetches real-time gold prices and calculates product prices accordingly.
-Users can browse, filter, and sort engagement ring products following a specific design guideline.
+Popularity is a pricing multiplier in this assignment, not a claim about how real retail jewelry prices are determined. The displayed score is popularity, not customer reviews.
 
-Tech Stack
-Layer	                 Technology
-Frontend	          React (Vite), Axios, Swiper
-Backend	             Node.js, Express.js, Axios, dotenv
-Styling	             Custom CSS + Provided Fonts (Avenir, Montserrat)
-Real-time Data	     GoldAPI.io (Live gold price in USD)
+## Start locally (Windows / macOS / Linux)
 
-## Features
- # Backend
+Use Node.js 22.12+ (Node 22 LTS recommended). Open two terminals at the project root.
 
-Serves product data from products.json
+Terminal 1:
 
-Calculates prices dynamically:
-
-Price = (popularityScore + 1) × weight × goldPricePerGram
-
-
-Retrieves real-time gold price (USD/gram) from GoldAPI
-
-Converts popularity score → 1–5 scale with one decimal place
-
-Supports filtering & sorting:
-
-Filter by min/max price
-
-Sort by price (asc/desc) or popularity
-
-# Frontend
-
-Fetches and displays product data from backend API
-
-Responsive layout:
-
-Desktop → Carousel (Swiper)
-
-Mobile → Single column grid
-
-Color picker changes product image
-
-Displays:
-
-Product name
-
-Dynamic price (in USD)
-
-Gold color type
-
-Popularity rating ⭐
-
-Filter bar to apply price and sorting filters
-
-## Folder Structure
-renart-case-study/
-│
-├── backend/
-│   ├── server.js
-│   ├── products.json
-│   ├── .env
-│   ├── package.json
-│   └── node_modules/
-│
-└── frontend/
-    ├── src/
-    │   ├── App.jsx
-    │   ├── App.css
-    │   ├── main.jsx
-    │   └── index.css
-    ├── public/
-    │   └── Fonts/
-    ├── vite.config.js
-    ├── package.json
-    └── node_modules/
-
-## Running Locally
-1) Clone the repository
-git clone https://github.com/BeyzaAkgun/renart-case-study.git
-cd renart-case-study
-
-2) Install dependencies
-Backend:
+```sh
 cd backend
-npm install
-
-Frontend:
-cd ../frontend
-npm install
-
-3) Set up environment variables
-
-Inside /backend folder, create a .env file:
-
-PORT=4000
-GOLD_API_KEY=your_goldapi_key_here
-
-
-Sign up and get a free API key from 👉 https://www.goldapi.io/
-
-4)  Run the project locally
-Start backend
-cd backend
+npm ci
 npm run dev
+```
 
-Start frontend
+Terminal 2:
 
-Open a second terminal:
-
+```sh
 cd frontend
+npm ci
 npm run dev
+```
 
+Open http://localhost:5173. Backend defaults to port 4000. No .env or API key is required for demo mode: the UI explicitly labels prices as demo prices at a sample rate of USD 70/g. This is not a current market quote. Product images are local assets, so color switching does not depend on the external image CDN at runtime.
 
-Backend runs at → http://localhost:4000
+## Enable live GoldAPI pricing
+1. Create an API key in your GoldAPI account.
+2. Copy `backend/.env.example` to `backend/.env` (in PowerShell: `Copy-Item .env.example .env` from backend).
+3. Set `GOLD_PRICE_MODE=live` and put the API key in `GOLD_API_KEY` locally.
+4. Restart the backend.
 
-Frontend runs at → http://localhost:5173
- (or whichever Vite chooses)
+The key stays on the server. NEVER put it in a VITE_ variable, source file, screenshot, or commit.
 
-5) Test endpoints
+Pricing is fetched on demand and cached in memory for five minutes. Concurrent requests share the same provider request. Failed requests back off for 30 seconds. When refresh fails, an existing quote is returned with `source: stale`; the UI shows it as the last available rate. With no successful live quote, the API returns 503. It never silently passes demo data off as live. HTTP failures, invalid JSON/data, non-positive prices and timeouts are handled. Quote cache resets on server restart. There is no automatic background refresh.
 
-You can test backend directly:
+## Frontend API configuration
 
-GET http://localhost:4000/products
+Development defaults to `/api`, proxied by Vite to http://127.0.0.1:4000. The same proxy works with `npm run preview`. No frontend .env is necessary locally.
 
+For a separate deployed backend, set `VITE_API_URL=https://your-backend-host` BEFORE building the frontend, and set backend `FRONTEND_ORIGINS` to the deployed frontend origin (comma-separated if several). Do not append `/products` to VITE_API_URL. Hosting uses its own environment-variable settings for the private GoldAPI key. If the backend port changes locally, update the target in vite.config.js.
 
-It should return:
+## API
 
-{
-  "data": [
-    {
-      "name": "Product 1",
-      "computedPrice": 1203.45,
-      "popularityOutOf5": 4.5
-    }
-  ]
-}
+- `GET /health`
+- `GET /products?minPrice=100&maxPrice=1000&sortBy=priceAsc`
+- Sort options: `priceAsc`, `priceDesc`, `popularity` (omit for collection order).
+- Invalid/negative prices, reversed bounds or unsupported sort: HTTP 400.
+- Response: `{ data: [...], pricing: { pricePerGram, source, updatedAt, currency, unit } }`.
+- Sources: `demo`, `live`, `cached`, `stale`.
+- Product IDs are stable across sorting/filtering. Image paths are relative to the frontend host.
 
- Deployment
-Frontend (Vercel)
+## Checks
 
- ## Deployment
-Backend (Render):
+```sh
+npm test --prefix backend
+npm run lint --prefix frontend
+npm run build --prefix frontend
+```
 
-URL: https://renart-backend-l0ts.onrender.com
+GitHub Actions runs these checks. Backend tests use stubbed provider responses and require no credentials.
 
-Frontend (Render Static Site)
+## Assets
 
-URL: https://renart-frontend-vnj3.onrender.com
-
-Frontend App.jsx: replace
-
-// Local
-axios.get("http://localhost:4000/products")
-
-// With live backend
-axios.get("https://renart-backend-l0ts.onrender.com/products")
-
-
-Then redeploy frontend.
-
- ## Bonus Features
-
-Real-time gold pricing
-Responsive design
-Product filtering and sorting
-Swiper carousel
-Custom local fonts (Avenir, Montserrat)
-
-## Author
-
-Beyza Akgün
-Computer Engineering Graduate
-Istanbul Bilgi University
-beyzaakgun@hotmail.com
-GitHub: BeyzaAkgun
-LinkedIn:www.linkedin.com/in/beyza-akgün-617237278
-
+`image-sources.json` records the original third-party URLs supplied by the case-study dataset. Bundling does not establish ownership or grant additional image rights. The supplied fonts remain in `frontend/public/Fonts`.

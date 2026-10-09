@@ -1,290 +1,116 @@
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, A11y, Keyboard } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import './App.css';
 
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import "./App.css";
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+const EMPTY_FILTERS = { minPrice: '', maxPrice: '', sortBy: '' };
+const COLORS = { yellow: 'Yellow Gold', white: 'White Gold', rose: 'Rose Gold' };
 
-function App() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [sortBy, setSortBy] = useState("");
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (minPrice) params.minPrice = minPrice;
-      if (maxPrice) params.maxPrice = maxPrice;
-      if (sortBy) params.sortBy = sortBy;
-
-      const API_URL = import.meta.env.VITE_API_URL;
-      const res = await axios.get(`${API_URL}/products`, { params });
-      setProducts(res.data.data || []);
-    } catch (err) {
-      console.error(err);
-      setError("Error fetching products");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFilter = (e) => {
-    e.preventDefault();
-    fetchProducts();
-  };
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
-
-  return (
-    <div
-      style={{
-        padding: "20px",
-        fontFamily: "Avenir-Book, sans-serif",
-        backgroundColor: "#fff",
-        minHeight: "100vh",
-        boxSizing: "border-box",
-      }}
-    >
-      <h1
-        style={{
-          textAlign: "center",
-          marginBottom: "30px",
-          fontFamily: "Avenir-Book",
-          fontSize: "45px",
-          color: "#111",
-        }}
-      >
-        💍 Product List
-      </h1>
-
-      {/* 🧭 Filtre Bar */}
-      <form
-        onSubmit={handleFilter}
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "10px",
-          marginBottom: "30px",
-          flexWrap: "wrap",
-        }}
-      >
-        <input
-          type="number"
-          placeholder="Min Price"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            fontFamily: "Avenir-Book",
-            width: "120px",
-          }}
-        />
-        <input
-          type="number"
-          placeholder="Max Price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            fontFamily: "Avenir-Book",
-            width: "120px",
-          }}
-        />
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            fontFamily: "Avenir-Book",
-          }}
-        >
-          <option value="">Sort By</option>
-          <option value="priceAsc">Price: Low → High</option>
-          <option value="priceDesc">Price: High → Low</option>
-          <option value="popularity">Popularity</option>
-        </select>
-
-        <button
-          type="submit"
-          style={{
-            padding: "8px 20px",
-            background: "#111",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontFamily: "Avenir-Book",
-          }}
-        >
-          Apply
-        </button>
-      </form>
-
-      {/* 💫 Slider masaüstünde, grid mobilde */}
-      <div className="product-container">
-        {window.innerWidth >= 768 ? (
-          <Swiper
-            modules={[Navigation]}
-            navigation
-            spaceBetween={30}
-            slidesPerView={3}
-            style={{
-              width: "100%",
-              minHeight: "520px",
-            }}
-            breakpoints={{
-              0: { slidesPerView: 1 },
-              768: { slidesPerView: 2 },
-              1024: { slidesPerView: 3 },
-            }}
-          >
-            {products.map((p, i) => (
-              <SwiperSlide key={i}>
-                <ProductCard product={p} />
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        ) : (
-          <div className="mobile-grid">
-            {products.map((p, i) => (
-              <ProductCard key={i} product={p} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function ProductImage({ src, alt }) {
+  const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
+  return <div className="image-frame" aria-busy={status === 'loading'}>
+    <img key={attempt} src={src} alt={alt} style={{ visibility: status === 'loaded' ? 'visible' : 'hidden' }}
+      onLoad={() => setStatus('loaded')} onError={() => setStatus('error')} />
+    {status === 'loading' && <span className="image-status" role="status">Loading image…</span>}
+    {status === 'error' && <div className="image-status" role="status">Image unavailable<br />
+      <button type="button" className="text-button" onClick={() => { setStatus('loading'); setAttempt(n => n + 1); }}>Retry image</button>
+    </div>}
+  </div>;
 }
 
 function ProductCard({ product }) {
-  const [color, setColor] = useState("yellow");
-
-  const colorNames = {
-    yellow: "Yellow Gold",
-    white: "White Gold",
-    rose: "Rose Gold",
-  };
-
-  const colors = {
-    yellow: "#E6CA97",
-    white: "#D9D9D9",
-    rose: "#E1A4A9",
-  };
-
-  return (
-    <div
-      style={{
-        textAlign: "center",
-        background: "transparent",
-        height: "520px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      }}
-    >
-      <div>
-        <img
-          src={product.images[color]}
-          alt={product.name}
-          style={{
-            width: "100%",
-            borderRadius: "20px",
-            height: "300px",
-            objectFit: "cover",
-          }}
-        />
+  const [color, setColor] = useState('yellow');
+  const src = product.images[color];
+  return <article className="product-card">
+    <ProductImage key={src} src={src} alt={`${product.name} — ${COLORS[color]}`} />
+    <div className="product-details">
+      <h2>{product.name}</h2>
+      <p className="price">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(product.computedPrice)} <span>USD</span></p>
+      <p className="color-name" aria-live="polite">{COLORS[color]}</p>
+      <div className="swatches" role="group" aria-label={`Metal color for ${product.name}`}>
+        {Object.entries(COLORS).map(([value, label]) => <button key={value} type="button"
+          className={`swatch ${value}`} aria-label={`${label} for ${product.name}`} title={label}
+          aria-pressed={value === color} onClick={() => setColor(value)} />)}
       </div>
-
-      <div>
-        <h3
-          style={{
-            marginTop: "10px",
-            fontFamily: "Montserrat-Medium",
-            fontSize: "15px",
-            color: "#111",
-          }}
-        >
-          {product.name}
-        </h3>
-
-        <p
-          style={{
-            fontFamily: "Avenir-Book",
-            fontSize: "14px",
-            color: "#333",
-            margin: "5px 0",
-          }}
-        >
-          ${product.computedPrice} USD
-        </p>
-
-        <p
-          style={{
-            fontFamily: "Avenir-Book",
-            fontSize: "12px",
-            marginBottom: "5px",
-            color: "#666",
-          }}
-        >
-          {colorNames[color]}
-        </p>
-
-        <div
-          style={{
-            marginTop: "5px",
-            display: "flex",
-            justifyContent: "center",
-            gap: "10px",
-          }}
-        >
-          {Object.keys(colors).map((clr) => (
-            <button
-              key={clr}
-              onClick={() => setColor(clr)}
-              style={{
-                background: colors[clr],
-                width: "25px",
-                height: "25px",
-                borderRadius: "50%",
-                border: clr === color ? "2px solid black" : "1px solid #ccc",
-                cursor: "pointer",
-              }}
-            ></button>
-          ))}
-        </div>
-
-        <p
-          style={{
-            marginTop: "8px",
-            fontFamily: "Avenir-Book",
-            fontSize: "14px",
-            color: "#222",
-          }}
-        >
-          ⭐ {product.popularityOutOf5} / 5
-        </p>
-      </div>
+      <p className="rating"><span aria-hidden="true">★</span> {product.popularityOutOf5.toFixed(1)} / 5 <span className="muted">popularity</span></p>
     </div>
-  );
+  </article>;
 }
 
-export default App;
+export default function App() {
+  const [draft, setDraft] = useState(EMPTY_FILTERS);
+  const [query, setQuery] = useState(EMPTY_FILTERS);
+  const [retry, setRetry] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [pricing, setPricing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [validation, setValidation] = useState('');
+  const [desktop, setDesktop] = useState(() => window.matchMedia('(min-width: 768px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)');
+    const update = () => setDesktop(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true); setError('');
+      try {
+        const params = Object.fromEntries(Object.entries(query).filter(([, value]) => value !== ''));
+        const response = await axios.get(`${API_URL}/products`, { params, signal: controller.signal, timeout: 12000 });
+        if (!Array.isArray(response.data?.data) || !response.data?.pricing ||
+            response.data.data.some(p => !p.id || !p.images || !Number.isFinite(p.computedPrice))) {
+          throw new Error('The API returned an unexpected response. Check the backend address.');
+        }
+        if (!controller.signal.aborted) { setProducts(response.data.data); setPricing(response.data.pricing); }
+      } catch (err) {
+        if (!controller.signal.aborted) setError(err.response?.data?.error || (err.code ? 'Could not load products. Check that the backend is running, then retry.' : err.message));
+      } finally { if (!controller.signal.aborted) setLoading(false); }
+    }
+    load();
+    return () => controller.abort();
+  }, [query, retry]);
+  function apply(event) {
+    event.preventDefault();
+    if (draft.minPrice !== '' && draft.maxPrice !== '' && Number(draft.minPrice) > Number(draft.maxPrice)) {
+      setValidation('Minimum price must not exceed maximum price.'); return;
+    }
+    setValidation(''); setQuery({ ...draft });
+  }
+  function reset() { setDraft(EMPTY_FILTERS); setQuery({ ...EMPTY_FILTERS }); setValidation(''); }
+  return <main>
+    <header className="page-header"><p className="eyebrow">THE ENGAGEMENT COLLECTION</p><h1>Find your forever piece.</h1>
+      <p className="subtitle">Explore eight designs in yellow, white and rose gold.</p></header>
+    <form className="filters" onSubmit={apply}>
+      <label>Min price (USD)<input type="number" min="0" step="0.01" placeholder="No minimum" value={draft.minPrice} onChange={e => setDraft({ ...draft, minPrice: e.target.value })} /></label>
+      <label>Max price (USD)<input type="number" min="0" step="0.01" placeholder="No maximum" value={draft.maxPrice} onChange={e => setDraft({ ...draft, maxPrice: e.target.value })} /></label>
+      <label>Sort by<select value={draft.sortBy} onChange={e => setDraft({ ...draft, sortBy: e.target.value })}>
+        <option value="">Collection order</option><option value="priceAsc">Price: Low → High</option><option value="priceDesc">Price: High → Low</option><option value="popularity">Popularity</option>
+      </select></label><button className="primary" disabled={loading}>Apply</button><button type="button" className="secondary" onClick={reset}>Reset</button>
+    </form>
+    {validation && <p className="message error" role="alert">{validation}</p>}
+    {loading ? <div className="message" role="status">Loading collection…</div> : error ?
+      <div className="message error" role="alert">{error}<br /><button className="secondary" onClick={() => setRetry(n => n + 1)}>Retry</button></div> : <>
+        <div className="collection-info"><span>{products.length} {products.length === 1 ? 'design' : 'designs'}</span>
+          <span className={`quote ${pricing.source}`}>
+            {pricing.source === 'demo' ? `Demo prices · sample gold rate $${pricing.pricePerGram.toFixed(2)}/g` :
+             `${pricing.source === 'stale' ? 'Last available' : 'Live gold'} rate · $${pricing.pricePerGram.toFixed(2)}/g · fetched ${new Date(pricing.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+          </span>
+        </div>
+        {pricing.source === 'stale' && <p className="message">Live pricing could not be refreshed. Prices use the last successful quote.</p>}
+        {products.length === 0 ? <div className="message" role="status">No designs match this price range.<br /><button className="secondary" onClick={reset}>Clear filters</button></div> :
+          desktop ? <Swiper key={JSON.stringify(query)} modules={[Navigation, A11y, Keyboard]} navigation keyboard={{ enabled: true }}
+            spaceBetween={28} slidesPerView={2} breakpoints={{ 1100: { slidesPerView: 3 } }}>
+            {products.map(p => <SwiperSlide key={p.id}><ProductCard product={p} /></SwiperSlide>)}
+          </Swiper> : <div className="mobile-grid">{products.map(p => <ProductCard key={p.id} product={p} />)}</div>}
+      </>}
+    <footer>Portfolio case study · USD pricing · Gold quotes cached for up to 5 minutes</footer>
+  </main>;
+}
